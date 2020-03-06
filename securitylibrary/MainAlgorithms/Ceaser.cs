@@ -10,17 +10,40 @@ namespace SecurityLibrary
     {
         public string Encrypt(string plainText, int key)
         {
-            throw new NotImplementedException();
+            string cipherText = "";
+            foreach(char letter in plainText)
+            {
+                // C = (index of P + key) mod 26
+                // C: cipher text letter
+                // P: plain text letter
+                char A = char.IsUpper(letter) ? 'A' : 'a';
+                char C = (char)(A + ((letter - A) + key) % 26);
+                cipherText += C;
+            }
+            return cipherText.ToUpper();
         }
 
         public string Decrypt(string cipherText, int key)
         {
-            throw new NotImplementedException();
+            string plainText = "";
+            foreach(char letter in cipherText)
+            {
+                char A = char.IsUpper(letter) ? 'A' : 'a';
+                char P = (char)(A + ((letter - A) + (26 - key)) % 26);
+                plainText += P;
+            }
+            return plainText.ToLower();
         }
 
         public int Analyse(string plainText, string cipherText)
         {
-            throw new NotImplementedException();
+            for(int key = 0; key < 26; key++)
+            {
+                string resultingCipherText = Encrypt(plainText, key);
+                if (cipherText == resultingCipherText)
+                    return key;
+            }
+            return -1;
         }
     }
 }
