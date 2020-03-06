@@ -1,197 +1,134 @@
 using System;
-using System.Collections.Generic;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SecurityLibrary;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SecurityLibrary
+namespace SecurityPackageTest
 {
-    public class PlayFair : ICryptographicTechnique<string, string>
+    [TestClass]
+    public class PlayfairTest
     {
-        /// <summary>
-        /// The most common diagrams in english (sorted): TH, HE, AN, IN, ER, ON, RE, ED, ND, HA, AT, EN, ES, OF, NT, EA, TI, TO, IO, LE, IS, OU, AR, AS, DE, RT, VE
-        /// </summary>
-        /// <param name="plainText"></param>
-        /// <param name="cipherText"></param>
-        /// <returns></returns>
-        public string Analyse(string plainText)
+        string mainPlain = "armuhsea";
+        string mainKey = "monoarchy";
+        string mainCipher = "rmcmbpim".ToUpper();
+
+        string mainPlain1 = "hidethegold";
+        string mainKey1 = "helloworld";
+        string mainCipher1 = "lfgdnwdpwoav".ToUpper();
+
+        string mainPlain2 = "comsecmeanscommunicationssecurity";
+        string mainPlain22 = "comsecmeanscommunjcatjonssecurjty";
+        string mainKey2 = "galois";
+        string mainCipher2 = "dlfdsdndihbddtntuebluoimcvbserulyo".ToUpper();
+        string mainCipher22 = "dlfdsdndjhbddtntuebluojmcvbserulyo".ToUpper();
+
+        string newPlain = "iseeyouthere";
+        string newKey = "RPMLDSAXICHKQUYEWOZGBFTVN".ToLower();
+        string newCipher = "CAOSGHZQBQBSOS".ToUpper();
+
+
+        [TestMethod]
+        public void PlayfairTestEnc1()
         {
-            throw new NotImplementedException();
+            PlayFair algorithm = new PlayFair();
+            string cipher = algorithm.Encrypt(mainPlain, mainKey);
+            Assert.IsTrue(cipher.Equals(mainCipher, StringComparison.InvariantCultureIgnoreCase));
         }
 
-        public string Analyse(string plainText, string cipherText)
+        [TestMethod]
+        public void PlayfairTestDec1()
         {
-            throw new NotSupportedException();
+            PlayFair algorithm = new PlayFair();
+            string plain = algorithm.Decrypt(mainCipher, mainKey);
+            Assert.IsTrue(plain.Equals(mainPlain, StringComparison.InvariantCultureIgnoreCase));
         }
 
-        char[,] key_matrix = new char[5, 5];
-        Tuple<int, int>[] character_indeces = new Tuple<int, int>[26];
 
-        public void Fill_key_matrix(string key)
+        [TestMethod]
+        public void PlayfairTestEnc2()
         {
-            // Filling it with the key first.
-            int key_ind = 0, last_row = 0;
-            for(int i = 0; i < 5 && key_ind < key.Length; i++){
-                for(int j = 0; j < 5 && key_ind < key.Length; j++){
-                    if(character_indeces[key[key_ind] - 'a'] == null){
-                        if(key[key_ind] == 'i' || key[key_ind] == 'j'){
-                            character_indeces['i' - 'a'] = Tuple.Create(i, j);
-                            character_indeces['j' - 'a'] = Tuple.Create(i, j);
-                            key_matrix[i,j] = 'i';
-                        }
-                        else{
-                            character_indeces[key[key_ind] - 'a'] = Tuple.Create(i, j);
-                            key_matrix[i, j] = key[key_ind];
-                        }
-                    }
-                    else
-                        j--;
-                    key_ind++;
-                    last_row = i;
-                }
-            }
-            //filling it with the remaining alphabet.
-            char alphabet_ch = 'a';
-            for(int i = last_row; i < 5; i++){
-                for(int j = 0; j < 5; j++){
-                    if(key_matrix[i, j] == '\0'){
-                        if(character_indeces[alphabet_ch - 'a'] == null){
-                            if(alphabet_ch == 'i' || alphabet_ch == 'j'){
-                                character_indeces['i' - 'a'] = Tuple.Create(i, j);
-                                character_indeces['j' - 'a'] = Tuple.Create(i, j);
-                                key_matrix[i,j] = 'i';
-                            }
-                            else{
-                                character_indeces[alphabet_ch  - 'a'] = Tuple.Create(i, j);
-                                key_matrix[i, j] = alphabet_ch;
-                            }
-                        }
-                        else
-                            j--;
-                        alphabet_ch++;
-                    }
-                }
-            }
+            PlayFair algorithm = new PlayFair();
+            string cipher = algorithm.Encrypt(mainPlain1, mainKey1);
+            Assert.IsTrue(cipher.Equals(mainCipher1, StringComparison.InvariantCultureIgnoreCase));
         }
 
-        public string plain_String_Preprocessing(string plainString)
+        [TestMethod]
+        public void PlayfairTestDec2()
         {
-            // Seperate every 2 consicutive similar charachters.
-            for (int i = 0; i < plainString.Length - 1; i += 2)
-            {
-                if (plainString[i] == plainString[i + 1])
-                    plainString = plainString.Insert(i+1, "x");
-            }
-            if (plainString.Length % 2 == 1)
-                plainString += "x";
-            return plainString;
+            PlayFair algorithm = new PlayFair();
+            string plain = algorithm.Decrypt(mainCipher1, mainKey1);
+            Assert.IsTrue(plain.Equals(mainPlain1, StringComparison.InvariantCultureIgnoreCase));
         }
 
-        public List<string> get_decryption_pairs_list(string inputText){
-            List<string> decryotionPairs = new List<string>();
-
-            for(int i = 0; i < inputText.Length - 1; i += 2){
-                decryotionPairs.Add(inputText[i].ToString() + inputText[i + 1].ToString());
-            }
-
-            return decryotionPairs;
-        }
-
-        public Tuple<int, int> get_character_index(char character){
-            Tuple<int, int> curInd = character_indeces[character - 'a'];
-            return curInd;
-        }
-
-        public string Decrypt(string cipherText, string key)
+        [TestMethod]
+        public void PlayfairTestEnc3()
         {
-            cipherText = cipherText.ToLower();
-            key = key.ToLower();
-
-            Fill_key_matrix(key);
-            List<string> decryptionPairs = get_decryption_pairs_list(cipherText);
-
-            //Using the key matrix to decrypt the decription pairs.
-            string plainText = "";
-            for (int i = 0; i < decryptionPairs.Count; i++)
-            {
-                Tuple<int, int> chInd1 = get_character_index(decryptionPairs[i][0]);
-                Tuple<int, int> chInd2 = get_character_index(decryptionPairs[i][1]);
-
-                if (chInd1.Item1 == chInd2.Item1){
-
-                    chInd1 = Tuple.Create(chInd1.Item1,  ((chInd1.Item2 - 1) % 5) < 0 ? ((chInd1.Item2 - 1) % 5) + 5 : ((chInd1.Item2 - 1) % 5));
-                    plainText += key_matrix[chInd1.Item1, chInd1.Item2];
-
-                    chInd2 = Tuple.Create(chInd2.Item1, ((chInd2.Item2 - 1) % 5) < 0 ? ((chInd2.Item2 - 1) % 5) + 5 : ((chInd2.Item2 - 1) % 5));
-                    plainText += key_matrix[chInd2.Item1, chInd2.Item2];
-                }
-                else if (chInd1.Item2 == chInd2.Item2){
-
-                    chInd1 = Tuple.Create(((chInd1.Item1 - 1) % 5) < 0 ? ((chInd1.Item1 - 1) % 5) + 5 : ((chInd1.Item1 - 1) % 5), chInd1.Item2);
-                    plainText += key_matrix[chInd1.Item1, chInd1.Item2];
-
-                    chInd2 = Tuple.Create(((chInd2.Item1 - 1) % 5) < 0 ? ((chInd2.Item1 - 1) % 5) + 5 : ((chInd2.Item1 - 1) % 5), chInd2.Item2);
-                    plainText += key_matrix[chInd2.Item1, chInd2.Item2];
-                }
-                else{
-                    plainText += key_matrix[chInd1.Item1, chInd2.Item2];
-                    plainText += key_matrix[chInd2.Item1, chInd1.Item2];
-                }
-            }
-
-            // Remove any excess x's in the decrypted string
-            if(plainText[plainText.Length - 1] == 'x')
-                plainText = plainText.Remove(plainText.Length - 1, 1);
-            for (int i = 0; i < plainText.Length - 2; i++)
-            {
-                if (plainText[i] == plainText[i + 2] && plainText[i + 1] == 'x')
-                    plainText = plainText.Remove(i + 1, 1);
-                else
-                    i++;
-            }
-            return plainText;
+            PlayFair algorithm = new PlayFair();
+            string cipher = algorithm.Encrypt(mainPlain2, mainKey2);
+            Assert.IsTrue(cipher.Equals(mainCipher2, StringComparison.InvariantCultureIgnoreCase) ||
+                cipher.Equals(mainCipher22, StringComparison.InvariantCultureIgnoreCase));
         }
 
-        public string Encrypt(string plainText, string key)
+        [TestMethod]
+        public void PlayfairTestDec3()
         {
-            plainText = plainText.ToLower();
-            key = key.ToLower();
-
-            Fill_key_matrix(key);
-            List<string> decryptionPairs = get_decryption_pairs_list(plain_String_Preprocessing(plainText));
-
-            //Using the key matrix to decrypt the decription pairs.
-            string cipherText = "";
-            for (int i = 0; i < decryptionPairs.Count; i++)
-            {
-                Tuple<int, int> chInd1 = get_character_index(decryptionPairs[i][0]);
-                Tuple<int, int> chInd2 = get_character_index(decryptionPairs[i][1]);
-
-                if (chInd1.Item1 == chInd2.Item1)
-                {
-
-                    chInd1 = Tuple.Create(chInd1.Item1, (chInd1.Item2 + 1) % 5);
-                    cipherText += key_matrix[chInd1.Item1, chInd1.Item2];
-
-                    chInd2 = Tuple.Create(chInd2.Item1, (chInd2.Item2 + 1) % 5);
-                    cipherText += key_matrix[chInd2.Item1, chInd2.Item2];
-                }
-                else if (chInd1.Item2 == chInd2.Item2)
-                {
-
-                    chInd1 = Tuple.Create((chInd1.Item1 + 1) % 5, chInd1.Item2);
-                    cipherText += key_matrix[chInd1.Item1, chInd1.Item2];
-
-                    chInd2 = Tuple.Create((chInd2.Item1 + 1) % 5, chInd2.Item2);
-                    cipherText += key_matrix[chInd2.Item1, chInd2.Item2];
-                }
-                else
-                {
-                    cipherText += key_matrix[chInd1.Item1, chInd2.Item2];
-                    cipherText += key_matrix[chInd2.Item1, chInd1.Item2];
-                }
-            }
-            return cipherText;
+            PlayFair algorithm = new PlayFair();
+            string plain = algorithm.Decrypt(mainCipher2, mainKey2);
+            Assert.IsTrue(plain.Equals(mainPlain2, StringComparison.InvariantCultureIgnoreCase) ||
+                plain.Equals(mainPlain22, StringComparison.InvariantCultureIgnoreCase));
         }
+
+        string largePlain = "theplayfaircipherusesafivebyfivetablecontainingakeywordorphrasememorizationofthekeywordandfoursimpleruleswasallthatwasrequiredtocreatethefivebyfivetableandusetheciphexlrckhtbrvmbrkhqcrxlrckhtbavheleeatgteenetnwembpqewovtdfheufiknylinthespacesinthetablewiththelettersofthekeyworddroppinganyduplicatelettersthenfilltheremainingspaceswiththerestofthelettersofthealphabetinorderusuallyiandhzittfcsoncapsegteeniohwqdpueityitintfexceruwsoftfdnpelbeoslldhtyvtorightorinsomeotherpatternsuchasaspiralbeginningintheupperlefthandcornerandendinginthecenterthekeywordtogetherwiththeconventionsforfillinginthefivebyfivetableconstitutethecipherkeyxlrckhtbrvmbrkhqcroencryptamessageonewouldbreakthemessageintodigramsgroupsoxlrckhtbemblyvterssuchthatforexamplexlrckhtbrenzloworlxlrckhtbrbecoqrvmbrkhqcrhelloworlxlrckhtbrvmbrkhqcrndmapthemoutonthekeytablxlrckhtbegkmdederxmbrkhqcrppendanuncommonmonogramtocompletethefinaldigraxlrckhtbbmhzetwolettersofthedigramareconsideredastheoppositecornersofarectangleinthekeytablexlrckhtbrctetedrdlwletavosinholohtferooksnrsofthisrectanglxlrckhtbbmhenopdzytiehslzlwrnlgisuurrulexlrckhtbbglwcdplmbrkhqcrtoeachpairoflettersintheplaintextmslxmbrkhqcrfbothlettersarethesamexlrckhtbrcwltvoqenblyvterislefxlrckhtbrvmbrkhqcrddaxlrckhtbrvmbrkhqcrafterthefirstlettexlrckhtbrdkorvsqxtheqewpphbwndboqnftvzmbrkhqcrxlrckhtbrvmbrkhqcrfthelettersappearonthesamerowofyourtablxlrckhtbbvreplacethemwiththeletterstotheirimmediaterightrespectivelyxlrckhtbbvrappingaroundtotheleftsideoftherowifaletterintheoriginalpairwasontherightsideoftheroxlrckhtbbmsmifthelettersappearonthesamecolumnofyourtablexlrckhtbreatorblgeqenmhtfekeyvtersimmediatelybelowrespectivelyxlrckhtbbvrappingaroundtothetopsideofthecolumnifaletterintheoriginalpairwasonthebottomsideofthecolumnmslxmbrkhqcrfthelettersarenotonthesameroworcolumnxlrckhtbreatorblgeqenmhtfekeyvtersonthesamerowrespectivelybutattheotherpairofcornersoftherectangledefinedbytheoriginalpaixlrckhtbbmhzeorderisimportanxlrckhtbbmfeikewmqblyvteroftheencryptedpairistheonethatliesonthesamerowasthefirstletteroftheplaintextpaixlrckhtbrvmbrkhqcrodecryptxlrckhtbeashiegtubearxmbrkhqcrppositexlrckhtbegtfdnowlxmbrkhqcrulesxlrckhtbagshfzmbrkhqcrstasxlrckhtbrvmbrkhqcrdroppinganyextraxlrckhtbrvmbrkhqcrxlrckhtbrvmbrkhqcrxlrckhtbeamhanbokoyuemezsndbittfdhgtanhswsohbahcmkitbslbshsmxlrckhtbbv";
+        string largeCipher = "NKROMPUIWGDEFWKBFPOBWSGKZDCXGKZDMORNRESTMOHQHQMDTKWCPEEAFRFBSWDTDTPEKYOMKWTSKLKBTKWCPEGDMBKPPFWHLATRFPTRWOSWPMMLGSQOSWDRLYFCRBZEEDDOZKNKRKGYRCUIGYKZSDTRSMRVOBNKREFWKBUNDEFINEDUNDEFINEDUNDEFINEDAKBTRDOMKZKBTKZQSDTRSTCOPZMRGKBPLKFQXQFQLKBWAWDBOHQNKKZSDTRCQNKNKRTKZZKBPPKNKKTCZOPDBBDPAWFMHSMVCPRQFDWZKTRNZZKBPNKBTGKNUMLKBDRVDHQHQHAASERWOKQKNKBDRONPKNKRTKZZKBPPKNKDOURGSCRQKTSDBRDXPVPNUQUGWMBKXKQLKBWSTDWAWDKZKBTKWISMCRPCKQZKQHQLKBZERFPOWPKLKBMORNRKEPNMRKNZXZECFHIZECFXBATKENKRDASNZZKBLPXBISWSWWFDPNRDKHQQHMHHQNKRZSUORFURKNKSMBEPETBDPMBBTCGMHHQNKREBTZKELKBTKWCPEEMAKKZKBCPKQKNKBEWMXBTQKSTPHPEGKNUQFMHHQNKRKGYRCUIGYKZSDTREWXBQKLZZKNKREFWKBEFCZUNDEFINEDUNDEFINEDEKQBCUOLDVBOWSKDSTCOPZMRCDDOTZKBTDBSWSKDHQZECGFDDVAHEPPRWPUNDEFINEDTRNZXZKBPPXBINKOMKPDRVSLATRUNDEFINEDRTXTPOPFUUNDEFINEDCREWTDUNDEFINEDKBNUTPOPFUUNDEFINEDUNDEFINEDMBVDOLKBTAZLSTNKKTCZMORNUNDEFINEDKGTBRBRBUNDEFINEDSUORMBSMXLEWNVTAQNSTAKDPNLWEATRUKZKZKBGKMSMRKHDPUNDEFINEDNKXKZOPTRNZZKBPPKNKRBKHDPVDDREWXBGCRDRBSWNKKESUAPWHZKEWBLRDWPGPDREQSMFMCKQLKBTKZQSDTRUNDEFINEDEZKZKBDRMPQKZDAPWHQKSTPKNKREPETBXBPPKNKHWDREQSMFMUNDEFINEDNKBTSARUZQKBKPNUTPCQMHKPXPFFPTRUNDEFINEDHQPEBRUNDEFINEDZEDOBIASFCPKTRNZZKBPHQNKROMPHQZKZNNANUNDEFINEDHREZFNKZZKBPPDKZKBWSTDUNDEFINEDEPQMZWTBTRNZXZKCFPNRKUNDEFINEDUNDEFINEDBVGDUNDEFINEDUNDEFINEDPGZKELKBGKBPLMKZZKUNDEFINEDBTEDUWNZNKBTCOASFCSMBESTQKLXUNDEFINEDUNDEFINEDUNDEFINEDKLKBTRNZZKBPSAORPDSTNKBODVRDPOPKZWPFMORNUNDEFINEDXDRRUWDKZKBQAKQKNKBTRNZZKBPZENKCKCFNVTDCGOMRDKHKNDRWAREQKZDQUUNDEFINEDXDPSUWFMHPDPZMBZENKRTRKNOGCKEKLKBEPCQGPTRNZZKCFQLKBPEKHHQPMASFCOSWPQLKBCFHINOGCKEKLKBEPUNDEFINEDNANKGNKRTKZZKBPSAORPDSTNKBODVREPTVLTSIUPZELSDTRUNDEFINEDROMPERNKDTCQNKNKRTKZXZKBPGQTDCGOMRTXCRTPODRWAREQKZDQUUNDEFINEDXDPSUWFMHPDPZMBZENKKZPAWHBRPKNKREPTVLQHGPTRNZZKCFQLKBPEKHHQPMASFCOSWPQLKBESNZZENAGCKEKLKBEWUPNQNANUNDEFINEDKLKBTRNZZKBPPDBTEZSTNKBODVRDPOPEEWUPNQUNDEFINEDROMPERNKDTCQNKNKRTKZXZKBPSTNKBODVRDPODRWAREQKZDQURXMONZNKKENKRDASFCPKEWBLRDWPKLKBDREQSMFMRBRKHQRBCXNKKECFHKMSURWGUNDEFINEDNKXKEDBRDHWGQAPELSMUNDEFINEDNKRKFCONTRNZXZKEPKLKBBTEDUWZKRAWGCFONKBSTKZGSLMKCWPQLKBWSTDEPOSONKBGKBPLMKZZKEPKLKBRUWGQLBZLOWGUNDEFINEDUNDEFINEDAERECUOLUNDEFINEDOBNKCKMXRDOBUNDEFINEDSUAPWHZKUNDEFINEDKLKBMPONUNDEFINEDPUBOUNDEFINEDMBNKUNDEFINEDONSWUNDEFINEDUNDEFINEDBDPAWFMHSMZCZNDPUNDEFINEDUNDEFINEDUNDEFINEDUNDEFINEDUNDEFINEDONGSMESTEZVDTKOBXBCKQLKBGKMSMNBOWSKDSIBTGKQHBNRBNANUNDEFINEDX";
+
+
+        string largePlainForAnlysis = "THEPLAYFAIRCIPHERUSESAFIVEBYFIVETABLECONTAININGAKEYWORDORPHRASEMEMORIZATIONOFTHEKEYWORDANDFOURSIMPLERULESWASALLTHATWASREQUIREDTOCREATETHEFIVEBYFIVETABLEANDUSETHECIPHEXLRCKHTBRVMBRKHQCRXLRCKHTBAVHELEEATGTEENETNWEMBPQEWOVTDFHEUFIKNYLINTHESPACESINTHETABLEWITHTHELETTERSOFTHEKEYWORDDROPPINGANYDUPLICATELETXTERSTHENFILXLTHEREMAININGSPACESWITHTHERESTOFTHELETTERSOFTHEALPHABETINORDERUSUALXLYIANDHZITTFCSONCAPSEGTEENIOHWQDPUEITYITINTFEXCERUWSOFTFDNPELBEOSLLDHTYVTORIGHTORINSOMEOTHERPATXTERNSUCHASASPIRALBEGINNINGINTHEUPXPERLEFTHANDCORNERANDENDINGINTHECENTERTHEKEYWORDTOGETHERWITHTHECONVENTIONSFORFILXLINGINTHEFIVEBYFIVETABLECONSTITUTETHECIPHERKEYXLRCKHTBRVMBRKHQCROENCRYPTAMESSAGEONEWOULDBREAKTHEMESXSAGEINTODIGRAMSGROUPSOXLRCKHTBEMBLYVTERSSUCHTHATFOREXAMPLEXLRCKHTBRENZLOWORLXLRCKHTBRBECOQRVMBRKHQCRHELXLOWORLXLRCKHTBRVMBRKHQCRNDMAPTHEMOUTONTHEKEYTABLXLRCKHTBEGKMDEDERXMBRKHQCRPXPENDANUNCOMXMONMONOGRAMTOCOMPLETETHEFINALDIGRAXLRCKHTBBMHZETWOLETXTERSOFTHEDIGRAMARECONSIDEREDASTHEOPXPOSITECORNERSOFARECTANGLEINTHEKEYTABLEXLRCKHTBRCTETEDRDLWLETAVOSINHOLOHTFEROOKSNRSOFTHISRECTANGLXLRCKHTBBMHENOPDZYTIEHSLZLWRNLGISUURRULEXLRCKHTBBGLWCDPLMBRKHQCRTOEACHPAIROFLETXTERSINTHEPLAINTEXTMSLXMBRKHQCRFBOTHLETTERSARETHESAMEXLRCKHTBRCWLTVOQENBLYVTERISLEFXLRCKHTBRVMBRKHQCRDXDAXLRCKHTBRVMBRKHQCRAFTERTHEFIRSTLETTEXLRCKHTBRDKORVSQXTHEQEWPPHBWNDBOQNFTVZMBRKHQCRXLRCKHTBRVMBRKHQCRFTHELETXTERSAPPEARONTHESAMEROWOFYOURTABLXLRCKHTBBVREPLACETHEMWITHTHELETXTERSTOTHEIRIMXMEDIATERIGHTRESPECTIVELYXLRCKHTBBVRAPXPINGAROUNDTOTHELEFTSIDEOFTHEROWIFALETXTERINTHEORIGINALPAIRWASONTHERIGHTSIDEOFTHEROXLRCKHTBBMSMIFTHELETTERSAPPEARONTHESAMECOLUMNOFYOURTABLEXLRCKHTBREATORBLGEQENMHTFEKEYVTERSIMMEDIATELYBELOWRESPECTIVELYXLRCKHTBBVRAPXPINGAROUNDTOTHETOPSIDEOFTHECOLUMNIFALETXTERINTHEORIGINALPAIRWASONTHEBOTXTOMSIDEOFTHECOLUMNMSLXMBRKHQCRFTHELETXTERSARENOTONTHESAMEROWORCOLUMNXLRCKHTBREATORBLGEQENMHTFEKEYVTERSONTHESAMEROWRESPECTIVELYBUTATXTHEOTHERPAIROFCORNERSOFTHERECTANGLEDEFINEDBYTHEORIGINALPAIXLRCKHTBBMHZEORDERISIMPORTANXLRCKHTBBMFEIKEWMQBLYVTEROFTHEENCRYPTEDPAIRISTHEONETHATLIESONTHESAMEROWASTHEFIRSTLETTEROFTHEPLAINTEXTPAIXLRCKHTBRVMBRKHQCRODECRYPTXLRCKHTBEASHIEGTUBEARXMBRKHQCRPXPOSITEXLRCKHTBEGTFDNOWLXMBRKHQCRULESXLRCKHTBAGSHFZMBRKHQCRSTASXLRCKHTBRVMBRKHQCRDROPPINGANYEXTRAXLRCKHTBRVMBRKHQCRXLRCKHTBRVMBRKHQCRXLRCKHTBEAMHANBOKOYUEMEZSNDBITTFDHGTANHSWSOHBAHCMKITBSLBSHSMXLRCKHTBBV".ToLower();
+
+        string largeKey = "pasword";
+
+        [TestMethod]
+        public void PlayfairTestEnc4()
+        {
+            PlayFair algorithm = new PlayFair();
+            string cipher = algorithm.Encrypt(largePlain, largeKey);
+            Assert.IsTrue(cipher.Equals(largeCipher, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        [TestMethod]
+        public void PlayfairTestDec4()
+        {
+            PlayFair algorithm = new PlayFair();
+            string plain = algorithm.Decrypt(largeCipher, largeKey);
+            Assert.IsTrue(plain.Equals(largePlain, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        [TestMethod]
+        public void PlayfairTestBonusAnalysis()
+        {
+            PlayFair algorithm = new PlayFair();
+            string plain = algorithm.Analyse(largeCipher);
+            int count = Enumerable.Range(0, largePlainForAnlysis.Length)
+              .Count(i => largePlainForAnlysis[i] == plain[i]);
+
+            Assert.IsTrue(count * 100 / largePlain.Length > 50);
+        }
+
+        [TestMethod]
+        public void PlayfairTestNewEnc()
+        {
+            PlayFair algorithm = new PlayFair();
+            string cipher = algorithm.Encrypt(newPlain, newKey);
+            Assert.IsTrue(cipher.Equals(newCipher, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        [TestMethod]
+        public void PlayfairTestNewDec()
+        {
+            PlayFair algorithm = new PlayFair();
+            string plain = algorithm.Decrypt(newCipher, newKey);
+            Assert.IsTrue(plain.Equals(newPlain, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+
     }
 }
