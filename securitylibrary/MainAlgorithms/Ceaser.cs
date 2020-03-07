@@ -20,7 +20,7 @@ namespace SecurityLibrary
                 char C = (char)(A + ((letter - A) + key) % 26);
                 cipherText += C;
             }
-            return cipherText.ToUpper();
+            return cipherText;
         }
 
         public string Decrypt(string cipherText, int key)
@@ -32,7 +32,7 @@ namespace SecurityLibrary
                 char P = (char)(A + ((letter - A) + (26 - key)) % 26);
                 plainText += P;
             }
-            return plainText.ToLower();
+            return plainText;
         }
 
         public int Analyse(string plainText, string cipherText)
@@ -40,7 +40,7 @@ namespace SecurityLibrary
             for(int key = 0; key < 26; key++)
             {
                 string resultingCipherText = Encrypt(plainText, key);
-                if (cipherText == resultingCipherText)
+                if (cipherText.Equals(resultingCipherText, StringComparison.InvariantCultureIgnoreCase))
                     return key;
             }
             return -1;
