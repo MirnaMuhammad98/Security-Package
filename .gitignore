@@ -3,3 +3,9 @@
 ################################################################################
 
 /.vs/SecurityPackage/v16/Server/sqlite3
+/.vs/SecurityPackage/v16/TestStore/0
+/securitylibrary/bin/Debug
+/.vs/SecurityPackage/v16
+/securitylibrary/obj/Debug
+/securitypackagetest/bin/Debug
+/securitypackagetest/obj/Debug

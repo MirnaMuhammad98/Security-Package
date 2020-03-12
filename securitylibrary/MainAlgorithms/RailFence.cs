@@ -20,7 +20,28 @@ namespace SecurityLibrary
 
         public string Encrypt(string plainText, int key)
         {
-            throw new NotImplementedException();
+            //Row Wise
+            List<List<char>> encryptionTable = new List<List<char>>(key);
+            int index = 0;
+            while(index < plainText.Length)
+            {
+                int keyIndex = 0;
+                while(index < plainText.Length && keyIndex < key)
+                {
+                    encryptionTable[keyIndex].Add(plainText[index]);
+                    keyIndex++;
+                    index++;
+                }
+            }
+
+            string decryptedString = "";
+            foreach(List<char> depth in encryptionTable)
+            {
+                foreach (char c in depth)
+                    decryptedString += c;
+            }
+
+            return decryptedString;
         }
     }
 }
