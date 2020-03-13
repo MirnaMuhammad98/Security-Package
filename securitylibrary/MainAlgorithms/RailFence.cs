@@ -15,12 +15,24 @@ namespace SecurityLibrary
 
         public string Decrypt(string cipherText, int key)
         {
-            throw new NotImplementedException();
+            string plainText = "";
+            int plainTextLength = cipherText.Length / key;
+            int index = 0;
+            while(index < cipherText.Length)
+            {
+                int plainTextIndex = 0;
+                while(index < cipherText.Length && plainTextIndex < plainTextLength)
+                {
+                    plainText += cipherText[index];
+                    index++;
+                    plainTextIndex++;
+                }
+            }
+            return plainText;
         }
 
         public string Encrypt(string plainText, int key)
         {
-            //Row Wise
             List<List<char>> encryptionTable = new List<List<char>>(key);
             int index = 0;
             while(index < plainText.Length)
