@@ -16,16 +16,19 @@ namespace SecurityLibrary
         public string Decrypt(string cipherText, int key)
         {
             string plainText = "";
-            int plainTextLength = cipherText.Length / key;
-            int index = 0;
-            while(index < cipherText.Length)
+            double x = (double)cipherText.Length / (double)key;
+            int plainTextLength = (int)Math.Round(x);
+
+            for (int plainTextIndex = 0; plainTextIndex < plainTextLength; plainTextIndex++)
             {
-                int plainTextIndex = 0;
-                while(index < cipherText.Length && plainTextIndex < plainTextLength)
+                int index = plainTextIndex;
+                for (int i = 0; i < key; i++)
                 {
+                    if (index == cipherText.Length)
+                        break;
+
                     plainText += cipherText[index];
-                    index++;
-                    plainTextIndex++;
+                    index += plainTextLength;
                 }
             }
             return plainText;
@@ -33,7 +36,11 @@ namespace SecurityLibrary
 
         public string Encrypt(string plainText, int key)
         {
-            List<List<char>> encryptionTable = new List<List<char>>(key);
+            List<List<char>> encryptionTable = new List<List<char>>();
+
+            for (int i = 0; i < key; i++)
+                encryptionTable.Add(new List<char>());
+
             int index = 0;
             while(index < plainText.Length)
             {
