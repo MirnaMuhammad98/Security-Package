@@ -10,7 +10,37 @@ namespace SecurityLibrary
     {
         public int Analyse(string plainText, string cipherText)
         {
-            throw new NotImplementedException();
+            if (plainText.Length != cipherText.Length)
+                return -1;
+            int key = 1;
+            while (true)
+            {
+                int countChars = 0, idx = 0;
+                string resultingCipherText = "";
+                for(int prv = 0; ; idx += key)
+                {
+                    // All characters were used.
+                    if (countChars == plainText.Length)
+                        break;
+
+                    // An end of a row was reached.
+                    // Go to the first character of
+                    // the following row.
+                    if(idx >= plainText.Length)
+                    {
+                        idx = prv + 1;
+                        prv++;
+                    }
+                    resultingCipherText += plainText[idx];
+                    countChars++;
+                }
+                if (resultingCipherText.Equals(cipherText, StringComparison.InvariantCultureIgnoreCase))
+                    break;
+                key++;
+                if (key > plainText.Length)
+                    return -1;
+            }
+            return key;
         }
 
         public string Decrypt(string cipherText, int key)
