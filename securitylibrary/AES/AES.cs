@@ -14,6 +14,7 @@ namespace SecurityLibrary.AES
         public int numberRounds = 10;
         public int Nk  = 4;
         public int Nb = 4;
+
         // S-BOX shape: 16x16
         public static Byte[,] sbox = {
             { 0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76 },
@@ -62,7 +63,8 @@ namespace SecurityLibrary.AES
         {
             // Convert plainText, key to ByteMatrixes
             List<List<Byte>> state = ToMatrix(plainText);
-            List<List<Byte>> w = new List<List<Byte>>(); //TODO: calculate the number of words in it
+            List<Byte> w = new List<Byte>(4 * Nb * (numberRounds + 1)); //TODO: calculate the number of words in it
+            // Elmfrod hna KeyExpansion bnndh 3liha b 2 list<Byte>
             KeyExpansion(ToMatrix(key), ref w);
             // AES Steps:
             /*
@@ -116,11 +118,15 @@ namespace SecurityLibrary.AES
             return state;
         }
 
-        public void AddRoundKey(/*DS state, DS roundKey*/)
+        public void AddRoundKey(ref List<List<Byte>> box, List<Byte> key)
         {
-            // Change void to return
-            // the appropriate DS
-            throw new NotImplementedException();
+            for(int i = 0; i < 4; i++)
+            {
+                for(int j = 0; j < Nb; j++)
+                {
+                    box[i][j] = (Byte)(box[i][j] ^ key[(j * 4) + i]);
+                }
+            }
         }
 
         public void RoundFunction(/*DS state, DS roundKey*/)
@@ -141,67 +147,122 @@ namespace SecurityLibrary.AES
             throw new NotImplementedException();
         }
 
-        public void SubBytes(/*DS state*/)
+        public void SubBytes(ref List<List<Byte>> box)
         {
-            // Change void to return
-            // the appropriate DS
-            throw new NotImplementedException();
-        }
-
-        public void InvSubBytes(/*DS state*/)
-        {
-            // Change void to return
-            // the appropriate DS
-            throw new NotImplementedException();
-        }
-
-        public void ShiftRow(/*DS state*/)
-        {
-            // Change void to return
-            // the appropriate DS
-            throw new NotImplementedException();
-        }
-
-        public void ShiftRows(/*DS state*/)
-        {
-            // Change void to return
-            // the appropriate DS
-            throw new NotImplementedException();
-        }
-
-        public void InvShiftRows(/*DS state*/)
-        {
-            // Change void to return
-            // the appropriate DS
-            throw new NotImplementedException();
-        }
-
-        public void MixColumns(/*DS state*/)
-        {
-            // Change void to return
-            // the appropriate DS
-            throw new NotImplementedException();
-        }
-
-        public void InvMixColumns(/*DS state*/)
-        {
-            // Change void to return
-            // the appropriate DS
-            throw new NotImplementedException();
-        }
-
-        public void KeyExpansion(List<List<Byte>> key, ref List<List<Byte>> w)
-        {
-            List<Byte> temp = new List<Byte>(4);
-            List<Byte> rcon = new List<Byte>(4);
-            /*
-            int i = 0;
-            while(i < 4 * Nk)
+            for(int i = 0; i < 4; i++)
             {
-                w[i]
+                for(int j = 0; j < Nb; j++)
+                {
+                    box[i][j] = sbox[box[i][j] / 16, box[i][j] % 16];
+                }
             }
-            */
-            throw new NotImplementedException();
+        }
+
+        public void InvSubBytes(ref List<List<Byte>> box)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                for (int j = 0; j < Nb; j++)
+                {
+                    box[i][j] = inv_sbox[box[i][j] / 16, box[i][j] % 16];
+                }
+            }
+        }
+
+        public void ShiftRow(ref List<List<Byte>> box, int row_index, int steps)
+        {
+            for(int i = 0; i < steps; i++)
+            {
+                byte tmp = box[row_index][0];
+                for(int j = 0; j < Nb - 1; j++)
+                {
+                    box[row_index][j] = box[row_index][j + 1];
+                }
+                box[row_index][Nb - 1] = tmp;
+            }
+        }
+
+        public void ShiftRows(ref List<List<Byte>> box)
+        {
+            ShiftRow(ref box, 1, 1);
+            ShiftRow(ref box, 2, 2);
+            ShiftRow(ref box, 3, 3);
+        }
+
+        public void InvShiftRows(ref List<List<Byte>> box)
+        {
+            ShiftRow(ref box, 1, Nb - 1);
+            ShiftRow(ref box, 2, Nb - 2);
+            ShiftRow(ref box, 3, Nb - 3);
+        }
+
+        public void MixColumns(ref List<List<Byte>> box)
+        {
+            for (int i = 0; i < Nb; i++)
+            {
+                box[i][0] = (Byte)(MulBytes((Byte)0x02, box[i][0]) ^ MulBytes((Byte)0x03, box[i][1]) ^ box[i][2] ^ box[i][3]);
+                box[i][1] = (Byte)(box[i][0] ^ MulBytes((Byte)0x02, box[i][1]) ^ MulBytes((Byte)0x03, box[i][2]) ^ box[i][3]);
+                box[i][2] = (Byte)(box[i][0] ^ box[i][1] ^ MulBytes((Byte)0x02, box[i][2]) ^ MulBytes((Byte)0x03, box[i][3]));
+                box[i][3] = (Byte)(MulBytes((Byte)0x03, box[i][0]) ^ box[i][1] ^ box[i][2] ^ MulBytes((Byte)0x02, box[i][3]));
+            }
+        }
+
+        public void InvMixColumns(ref List<List<Byte>> box)
+        {
+            for (int i = 0; i < Nb; i++)
+            {
+                box[i][0] = (Byte)(MulBytes((Byte)0x0e, box[i][0]) ^ MulBytes((Byte)0x0b, box[i][1]) ^ MulBytes((Byte)0x0d, box[i][2]) ^ MulBytes((Byte)0x09, box[i][3]));
+                box[i][1] = (Byte)(MulBytes((Byte)0x09, box[i][0]) ^ MulBytes((Byte)0x0e, box[i][1]) ^ MulBytes((Byte)0x0b, box[i][2]) ^ MulBytes((Byte)0x0d, box[i][3]));
+                box[i][2] = (Byte)(MulBytes((Byte)0x0d, box[i][0]) ^ MulBytes((Byte)0x09, box[i][1]) ^ MulBytes((Byte)0x0e, box[i][2]) ^ MulBytes((Byte)0x0b, box[i][3]));
+                box[i][3] = (Byte)(MulBytes((Byte)0x0b, box[i][0]) ^ MulBytes((Byte)0x0d, box[i][1]) ^ MulBytes((Byte)0x09, box[i][2]) ^ MulBytes((Byte)0x0e, box[i][3]));
+            }
+        }
+
+        public void KeyExpansion(List<Byte> key, ref List<Byte> w)
+        {
+            List<Byte> temp = new List<Byte> (4);
+            List<Byte> rcon = new List<Byte>(4);
+            
+            for(int i = 0; i < 4 * Nk; i++)
+            {
+                w[i] = key[i];
+            }
+
+            for(int i = 4 * Nk; i < 4 * Nb *(numberRounds +  1); i += 4)
+            {
+                for (int j = 0; j < 4; j++)
+                    temp[j] = w[i - 4 + j];
+
+                if (i / (4 % Nk) == 0)
+                {
+                    RotWord(ref temp);
+                    SubWord(ref temp);
+                    Rcon(ref rcon, i / (Nk * 4));
+                    XorWords(temp, rcon, ref temp);
+                }
+                else if (Nk > 6 && i / (4 % Nk) == 4)
+                    SubWord(ref temp);
+
+                for (int j = 0; j < 4; j++)
+                    w[j + i] = (Byte)(w[i + j - 4 * Nk] ^ temp[j]);
+            }
+        }
+
+        public Byte MulBytes(Byte b1, Byte b2)
+        {
+            Byte ans = 0;
+            for(int i = 0; i < 8; i++)
+            {
+                if ((b2 & 1) == 1)
+                {
+                    Byte tmp = b1;
+                    for (int j = 0; j < i; j++)
+                        tmp = Xtime(tmp);
+                    ans = (Byte)(ans ^ tmp);
+                }
+                b2 = (Byte)(b2 >> 1);
+            }
+            return ans;
         }
 
         public void RotWord(ref List<Byte> word)
