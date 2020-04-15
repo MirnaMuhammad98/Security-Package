@@ -11,9 +11,12 @@ namespace SecurityLibrary.AES
     /// </summary>
     public class AES : CryptographicTechnique
     {
+        //TODO: CLEAN THE CODE!!!
+
         public int numberRounds = 10;
-        public int Nk  = 4;
-        public int Nb = 4;
+        public int nW = 4; // number of words in key
+        //TODO: use the variable below to make the code generic
+        public int nB = 4; // number of bytes in word
 
         // S-BOX shape: 16x16
         public static Byte[,] sbox = {
@@ -61,25 +64,79 @@ namespace SecurityLibrary.AES
 
         public override string Encrypt(string plainText, string key)
         {
+            // Number of Keys = numberRounds + 1
+            // Per key there exist 4 bits == #words
+            List<List<Byte>> w = new List<List<Byte>>();
+            int numberKeys = nW * (numberRounds + 1);
+            for (int i = 0; i < nB; i++)
+                w.Add(new List<Byte>());
+            for (int i = 0; i < nB; i++)
+                // Add Per word its nB Bytes
+                for (int j = 0; j < numberKeys; j++)
+                    w[i].Add(0x00);
+            // Create a temporary variable to hold keys
+            List<List<Byte>> roundKey = new List<List<byte>>();
+            for (int i = 0; i < nB; i++)
+                roundKey.Add(new List<byte>());
+            for (int i = 0; i < nB; i++)
+                for (int j = 0; j < nW; j++)
+                    roundKey[i].Add(0x00);
             // Convert plainText, key to ByteMatrixes
             List<List<Byte>> state = ToMatrix(plainText);
-            List<Byte> w = new List<Byte>(4 * Nb * (numberRounds + 1)); //TODO: calculate the number of words in it
-            // Elmfrod hna KeyExpansion bnndh 3liha b 2 list<Byte>
+
             KeyExpansion(ToMatrix(key), ref w);
             // AES Steps:
-            /*
-            1. Add round key [K0]
-            2. Round Function (10 rounds for 128-bit key)
-                2.1 Substitute bytes
-                    2.1.1 Build the S-Box
-                    2.1.2 Substitute
-                2.2 Shift rows
-                2.3 Mix columns
-                2.4 Add round key [K1, K2 ... Kn]
-                    2.4.1 Subkey generation
-            */
+            // 1. Add round key [K0]
+            GetRoundKey(0, w, ref roundKey);
+            AddRoundKey(ref state, roundKey);
+            // 2. Round Function (10 rounds for 128-bit key)
+                // 2.1 Substitute bytes
+                    // 2.1.1 Build the S-Box
+                    // 2.1.2 Substitute
+                // 2.2 Shift rows
+                // 2.3 Mix columns
+                // 2.4 Add round key [K1, K2 ... Kn]
+                    // 2.4.1 Subkey generation
+            //TODO: the below code should implement the Round Function
+            for(int i=1; i <= numberRounds - 1; i++)
+            {
+                SubBytes(ref state);
+                ShiftRows(ref state);
+                MixColumns(ref state);
+                GetRoundKey(i, w, ref roundKey);
+                AddRoundKey(ref state, roundKey);
+            }
+            SubBytes(ref state);
+            ShiftRows(ref state);
+            GetRoundKey(numberRounds, w, ref roundKey);
+            AddRoundKey(ref state, roundKey);
 
-            throw new NotImplementedException();
+            //TODO: create a function to convert from the state to a hexa string
+            return ToHex(state);
+        }
+
+        public void GetRoundKey(int round, List<List<Byte>>w, ref List<List<Byte>> key)
+        {
+            int idx = round * nW; // Start of the round key
+            for (int i = 0; i < nW; i++)
+                for (int j = 0; j < nB; j++)
+                    key[j][i] = w[j][idx + i];
+        }
+
+        public string ToHex(List<List<Byte>> state)
+        {
+            string hexaStr = "0x";
+            for (int i = 0; i < nW; i++)
+            {
+                for (int j = 0; j < nB; j++)//word size
+                {
+                    string value = Convert.ToString(state[j][i], 16);
+                    if (value.Length == 1)
+                        value = "0" + value;
+                    hexaStr += value;
+                }
+            }
+            return hexaStr;
         }
 
         public List<List<Byte>> ToMatrix(string hexText)
@@ -118,15 +175,11 @@ namespace SecurityLibrary.AES
             return state;
         }
 
-        public void AddRoundKey(ref List<List<Byte>> box, List<Byte> key)
+        public void AddRoundKey(ref List<List<Byte>> state, List<List<Byte>> key)
         {
-            for(int i = 0; i < 4; i++)
-            {
-                for(int j = 0; j < Nb; j++)
-                {
-                    box[i][j] = (Byte)(box[i][j] ^ key[(j * 4) + i]);
-                }
-            }
+            for(int i = 0; i < nW; i++)
+                for(int j = 0; j < nB; j++)
+                    state[j][i] = (Byte)(state[j][i] ^ key[j][i]);
         }
 
         public void RoundFunction(/*DS state, DS roundKey*/)
@@ -147,118 +200,166 @@ namespace SecurityLibrary.AES
             throw new NotImplementedException();
         }
 
-        public void SubBytes(ref List<List<Byte>> box)
+        public void SubBytes(ref List<List<Byte>> state)
         {
-            for(int i = 0; i < 4; i++)
+            for(int i = 0; i < nW; i++)
+                for(int j = 0; j < nB; j++)
+                    state[j][i] = sbox[state[j][i] / 16, state[j][i] % 16];
+        }
+
+        public void InvSubBytes(ref List<List<Byte>> state)
+        {
+            for (int i = 0; i < nW; i++)
+                for (int j = 0; j < nB; j++)
+                    state[j][i] = inv_sbox[state[j][i] / 16, state[j][i] % 16];
+        }
+
+        public void ShiftRow(ref List<List<Byte>> state, int rowIndex, int step)
+        {
+            for(int i = 0; i < step; i++)
             {
-                for(int j = 0; j < Nb; j++)
+                Byte temp = state[rowIndex][0];
+                for(int j = 0; j < 4 - 1; j++)
                 {
-                    box[i][j] = sbox[box[i][j] / 16, box[i][j] % 16];
+                    state[rowIndex][j] = state[rowIndex][j + 1];
+                }
+                state[rowIndex][4 - 1] = temp;
+            }
+        }
+
+        public void ShiftRows(ref List<List<Byte>> state)
+        {
+            ShiftRow(ref state, 1, 1);
+            ShiftRow(ref state, 2, 2);
+            ShiftRow(ref state, 3, 3);
+        }
+
+        public void InvShiftRows(ref List<List<Byte>> state)
+        {
+            ShiftRow(ref state, 1, 3);
+            ShiftRow(ref state, 2, 2);
+            ShiftRow(ref state, 3, 1);
+        }
+
+        public void MixColumns(ref List<List<Byte>> state)
+        {
+            List<Byte> a = new List<Byte>();
+            List<Byte> b = new List<Byte>();
+            for(int i=0;i  < nB; i++)
+            {
+                a.Add(0x00);
+                b.Add(0x00);
+            }
+
+            for (int col = 0; col < nW; col++)
+            {
+                for(int row = 0; row < nB; row++)
+                {
+                    a[row] = state[row][col];
+                }
+
+                // b[0, j] = [2 3 1 1] a[0, j]
+                // b[1, j] = [1 2 3 1] a[1, j]
+                // b[2, j] = [1 1 2 3] a[2, j]      j = col
+                // b[3, j] = [3 1 1 2] a[3, j]
+                // Matrix additon == XOR
+                // Matrix multiplication == MulBytes(M[i, j], a[m, n])
+                b[0] = (Byte)(MulBytes(0x02, a[0]) ^ MulBytes(0x03, a[1]) ^ a[2] ^ a[3]);
+                b[1] = (Byte)(a[0] ^ MulBytes(0x02, a[1]) ^ MulBytes(0x03, a[2]) ^ a[3]);
+                b[2] = (Byte)(a[0] ^ a[1] ^ MulBytes(0x02, a[2]) ^ MulBytes(0x03, a[3]));
+                b[3] = (Byte)(MulBytes(0x03, a[0]) ^ a[1] ^ a[2] ^ MulBytes(0x02, a[3]));
+
+                for(int row = 0; row < 4; row++)
+                {
+                    state[row][col] = b[row];
                 }
             }
         }
 
-        public void InvSubBytes(ref List<List<Byte>> box)
+        public void InvMixColumns(ref List<List<Byte>> state)
         {
-            for (int i = 0; i < 4; i++)
+            List<Byte> a = new List<Byte>();
+            List<Byte> b = new List<Byte>();
+            for (int i = 0; i < nB; i++)
             {
-                for (int j = 0; j < Nb; j++)
+                a.Add(0x00);
+                b.Add(0x00);
+            }
+
+            for (int col = 0; col < nW; col++)
+            {
+                for (int row = 0; row < nB; row++)
                 {
-                    box[i][j] = inv_sbox[box[i][j] / 16, box[i][j] % 16];
+                    a[row] = state[row][col];
+                }
+
+                //                  [0E 0B 0D 09]
+                //                  [09 0E 0B 0D]
+                // Inverse Matrix = [0D 09 0E 0B]
+                //                  [0B 0D 09 0E]               
+                b[0] = (Byte)(MulBytes(0x0E, a[0]) ^ MulBytes(0x0B, a[1]) ^ MulBytes(0x0D, a[2]) ^ MulBytes(0x09, a[3]));
+                b[1] = (Byte)(MulBytes(0x09, a[0]) ^ MulBytes(0x0E, a[1]) ^ MulBytes(0x0B, a[2]) ^ MulBytes(0x0D, a[3]));
+                b[2] = (Byte)(MulBytes(0x0D, a[0]) ^ MulBytes(0x09, a[1]) ^ MulBytes(0x0E, a[2]) ^ MulBytes(0x0B, a[3]));
+                b[3] = (Byte)(MulBytes(0x0B, a[0]) ^ MulBytes(0x0D, a[1]) ^ MulBytes(0x09, a[2]) ^ MulBytes(0x0E, a[3]));
+
+                for (int row = 0; row < 4; row++)
+                {
+                    state[row][col] = b[row];
                 }
             }
         }
 
-        public void ShiftRow(ref List<List<Byte>> box, int row_index, int steps)
+        public void KeyExpansion(List<List<Byte>> key, ref List<List<Byte>> w)
         {
-            for(int i = 0; i < steps; i++)
+            List<Byte> prev = new List<Byte>();
+            List<Byte> rcon = new List<Byte>();
+            for (int i = 0; i < nB; i++)
             {
-                byte tmp = box[row_index][0];
-                for(int j = 0; j < Nb - 1; j++)
-                {
-                    box[row_index][j] = box[row_index][j + 1];
-                }
-                box[row_index][Nb - 1] = tmp;
-            }
-        }
-
-        public void ShiftRows(ref List<List<Byte>> box)
-        {
-            ShiftRow(ref box, 1, 1);
-            ShiftRow(ref box, 2, 2);
-            ShiftRow(ref box, 3, 3);
-        }
-
-        public void InvShiftRows(ref List<List<Byte>> box)
-        {
-            ShiftRow(ref box, 1, Nb - 1);
-            ShiftRow(ref box, 2, Nb - 2);
-            ShiftRow(ref box, 3, Nb - 3);
-        }
-
-        public void MixColumns(ref List<List<Byte>> box)
-        {
-            for (int i = 0; i < Nb; i++)
-            {
-                box[i][0] = (Byte)(MulBytes((Byte)0x02, box[i][0]) ^ MulBytes((Byte)0x03, box[i][1]) ^ box[i][2] ^ box[i][3]);
-                box[i][1] = (Byte)(box[i][0] ^ MulBytes((Byte)0x02, box[i][1]) ^ MulBytes((Byte)0x03, box[i][2]) ^ box[i][3]);
-                box[i][2] = (Byte)(box[i][0] ^ box[i][1] ^ MulBytes((Byte)0x02, box[i][2]) ^ MulBytes((Byte)0x03, box[i][3]));
-                box[i][3] = (Byte)(MulBytes((Byte)0x03, box[i][0]) ^ box[i][1] ^ box[i][2] ^ MulBytes((Byte)0x02, box[i][3]));
-            }
-        }
-
-        public void InvMixColumns(ref List<List<Byte>> box)
-        {
-            for (int i = 0; i < Nb; i++)
-            {
-                box[i][0] = (Byte)(MulBytes((Byte)0x0e, box[i][0]) ^ MulBytes((Byte)0x0b, box[i][1]) ^ MulBytes((Byte)0x0d, box[i][2]) ^ MulBytes((Byte)0x09, box[i][3]));
-                box[i][1] = (Byte)(MulBytes((Byte)0x09, box[i][0]) ^ MulBytes((Byte)0x0e, box[i][1]) ^ MulBytes((Byte)0x0b, box[i][2]) ^ MulBytes((Byte)0x0d, box[i][3]));
-                box[i][2] = (Byte)(MulBytes((Byte)0x0d, box[i][0]) ^ MulBytes((Byte)0x09, box[i][1]) ^ MulBytes((Byte)0x0e, box[i][2]) ^ MulBytes((Byte)0x0b, box[i][3]));
-                box[i][3] = (Byte)(MulBytes((Byte)0x0b, box[i][0]) ^ MulBytes((Byte)0x0d, box[i][1]) ^ MulBytes((Byte)0x09, box[i][2]) ^ MulBytes((Byte)0x0e, box[i][3]));
-            }
-        }
-
-        public void KeyExpansion(List<Byte> key, ref List<Byte> w)
-        {
-            List<Byte> temp = new List<Byte> (4);
-            List<Byte> rcon = new List<Byte>(4);
-            
-            for(int i = 0; i < 4 * Nk; i++)
-            {
-                w[i] = key[i];
+                prev.Add(0x00);
+                rcon.Add(0x00);
             }
 
-            for(int i = 4 * Nk; i < 4 * Nb *(numberRounds +  1); i += 4)
+            for (int i = 0; i < nB; i++)
+                for (int j = 0; j < nW; j++)
+                    w[i][j] = key[i][j];
+
+            // the fours are the number of Bytes per 32-bit word: AES-128 has 4 words.
+            int numberKeys = nW * (numberRounds + 1);
+            for (int i = nW; i < numberKeys; i++)
             {
+                // Get previous word
                 for (int j = 0; j < 4; j++)
-                    temp[j] = w[i - 4 + j];
+                    prev[j] = w[j][i - 1];
 
-                if (i / (4 % Nk) == 0)
+                if (i % nW == 0)
                 {
-                    RotWord(ref temp);
-                    SubWord(ref temp);
-                    Rcon(ref rcon, i / (Nk * 4));
-                    XorWords(temp, rcon, ref temp);
+                    RotWord(ref prev);
+                    SubWord(ref prev);
+                    Rcon(ref rcon, i / nW);
+                    XorWords(prev, rcon, ref prev);
                 }
-                else if (Nk > 6 && i / (4 % Nk) == 4)
-                    SubWord(ref temp);
-
+                // Bigger key sizes
+                // the below can be removed, as we are implementing AES-128
+                else if (nW > 6 && i / 4 % nW == 4)
+                    SubWord(ref prev);
+                // W_{i} = W_{i - nW} XOR prev 
                 for (int j = 0; j < 4; j++)
-                    w[j + i] = (Byte)(w[i + j - 4 * Nk] ^ temp[j]);
+                    w[j][i] = (Byte)(w[j][i - nW] ^ prev[j]);
             }
+
         }
 
         public Byte MulBytes(Byte b1, Byte b2)
         {
-            Byte ans = 0;
+            Byte ans = 0, temp;
             for(int i = 0; i < 8; i++)
             {
-                if ((b2 & 1) == 1)
+                if ((b2 & 0x01) == 0x01)
                 {
-                    Byte tmp = b1;
+                    temp = b1;
                     for (int j = 0; j < i; j++)
-                        tmp = Xtime(tmp);
-                    ans = (Byte)(ans ^ tmp);
+                        temp = Xtime(temp);
+                    ans = (Byte)(ans ^ temp);
                 }
                 b2 = (Byte)(b2 >> 1);
             }
@@ -291,23 +392,22 @@ namespace SecurityLibrary.AES
         // Round Constant
         public void Rcon(ref List<Byte> word, int n)
         {
-            Byte c = 1;
-            for(int i=0; i < n - 1; i++)
+            Byte c = 0x01;
+            for (int i = 0; i < n - 1; i++)
             {
                 c = Xtime(c);
             }
             word[0] = c;
-            word[1] = word[2] = word[3] = 0;
+            word[1] = word[2] = word[3] = 0x00;
         }
 
         public Byte Xtime(Byte b)
         {
-            Byte mask = 0x80, m = 0x1B;
-            Byte highBit = (Byte)(b & mask);
-            b <<= 1;
-            if (highBit != 0x00)
+            Byte highBit = (Byte)(b & 0x80);
+            b = (Byte)(b << 1);
+            if (highBit > 0x00)
             {
-                b ^= m;
+                b = (Byte)(b ^ 0x1B);
             }
             return b;
         }
