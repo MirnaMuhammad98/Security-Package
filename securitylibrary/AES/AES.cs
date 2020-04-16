@@ -59,7 +59,46 @@ namespace SecurityLibrary.AES
 
         public override string Decrypt(string cipherText, string key)
         {
-            throw new NotImplementedException();
+            // Number of Keys = numberRounds + 1
+            // Per key there exist 4 bits == #words
+            List<List<Byte>> w = new List<List<Byte>>();
+            int numberKeys = nW * (numberRounds + 1);
+            for (int i = 0; i < nB; i++)
+                w.Add(new List<Byte>());
+            for (int i = 0; i < nB; i++)
+                // Add Per word its nB Bytes
+                for (int j = 0; j < numberKeys; j++)
+                    w[i].Add(0x00);
+            // Create a temporary variable to hold keys
+            List<List<Byte>> roundKey = new List<List<byte>>();
+            for (int i = 0; i < nB; i++)
+                roundKey.Add(new List<byte>());
+            for (int i = 0; i < nB; i++)
+                for (int j = 0; j < nW; j++)
+                    roundKey[i].Add(0x00);
+            // Convert plainText, key to ByteMatrixes
+            List<List<Byte>> state = ToMatrix(cipherText);
+
+            KeyExpansion(ToMatrix(key), ref w);
+
+            GetRoundKey(numberRounds, w, ref roundKey);
+            AddRoundKey(ref state, roundKey);
+
+            for (int i = numberRounds - 1 ; i >= 1; i--)
+            {
+                InvSubBytes(ref state);
+                InvShiftRows(ref state);
+                GetRoundKey(i, w, ref roundKey);
+                AddRoundKey(ref state, roundKey);
+                InvMixColumns(ref state);
+            }
+            InvSubBytes(ref state);
+            InvShiftRows(ref state);
+            GetRoundKey(0, w, ref roundKey);
+            AddRoundKey(ref state, roundKey);
+
+            //TODO: create a function to convert from the state to a hexa string
+            return ToHex(state);
         }
 
         public override string Encrypt(string plainText, string key)
