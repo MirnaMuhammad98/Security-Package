@@ -12,69 +12,116 @@ namespace SecurityLibrary.DES {
         public override string Decrypt(string cipherText, string key) {
             throw new NotImplementedException();
         }
+        
+        struct Halves {
+            public ulong Left;
+            public ulong Right;
+        }
 
+        ulong[] keys = new ulong[16]; // Array to hold all the keys that will be generated
+        
         public override string Encrypt(string plainText, string key) {
-            ulong[] binaryBlocks = StringToBinary(plainText);
-            foreach(ulong binaryBlock in binaryBlocks) {
-
-            }
+            ulong plainBlock = Convert.ToUInt64(plainText, 16); // Convert Hex string to 64 bits number
+            ulong plainKey = Convert.ToUInt64(key, 16);
             
-            throw new NotImplementedException();
-        }
-        ulong[] StringToBinary(string text) { // ulong = 64 bits
-            if (text[0] == '0' && text[1] == 'x')
-                text = Convert.ToString(Convert.ToInt32(text));
-            byte[] textBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(text);
-            ulong[] textBlocks = new ulong[Convert.ToInt32(Math.Ceiling(textBytes.Length / 8.0))];
-            int currentBlock = -1;
-            for (int i = 0; i < textBytes.Length; i++) {
-                if (i % 8 == 0)
-                    currentBlock++;
-                textBlocks[currentBlock] = 0;
-                textBlocks[currentBlock] = textBlocks[currentBlock] << 8;
-                textBlocks[currentBlock] |= textBytes[i];
-            }
-            return textBlocks;
-        }
+            GenerateKeys(plainKey);
 
-        ulong EncryptBlock(ulong block, ulong key) {
-            Halves splitBlock = SplitBlock(block);
+            ulong initialPermBlock = Permute(plainBlock, ref initialPermTable);
+            Halves halves = Split64(initialPermBlock);
             for(int i = 0; i < 16; i++) {
-                ulong newLeft = splitBlock.Right;
-                ulong newRight = splitBlock.Left ^ Round(splitBlock.Right, key);
+                halves = Round(halves, keys[i]);
             }
-            throw new NotImplementedException();
+
+            ulong swapped = halves.Right | (halves.Left >> 32);
+            ulong final = Permute(swapped, ref inverseInitialPermTable);
+            byte[] bytes = BitConverter.GetBytes(final);
+            StringBuilder sb = new StringBuilder();
+            sb.Append("0x");
+            for (int i = 0; i < bytes.Length; i++) {
+                sb.Append(bytes[i].ToString("x2"));
+            }
+            return sb.ToString();
         }
 
-        Halves SplitBlock(ulong block) {
+        // Takes original key and generates all 16 keys.
+        void GenerateKeys(ulong key) {
+            ulong pc1Key = Permute(key, ref permChoice1Table);
+            Halves keyHalves = Split56(pc1Key);
+            for (int i = 0; i < 16; i++) {
+                keyHalves.Left = LeftShift56(keyHalves.Left, LeftShifts[i]);
+                keyHalves.Right = LeftShift56(keyHalves.Right, LeftShifts[i]);
+                ulong newKey = Merge(keyHalves);
+                keys[i] = Permute(newKey, ref permChoice2Table);
+            }
+        }
+
+        ulong LeftShift56(ulong val, int shiftLength) {
+            for (int i = 0; i < shiftLength; i++) {
+                ulong msb = val & 0x8000000000000000;
+                val = ((val << 1) & 0xFFFFFFE000000000) | (msb >> 27);
+            }
+            return val;
+        }
+
+        ulong Merge(Halves halves) {
+            return halves.Left | halves.Right;
+        }
+
+        Halves Split64(ulong block) {
             Halves splitBlock = new Halves();
             splitBlock.Left = block >> 32 << 32;
             splitBlock.Right = block << 32;
             return splitBlock;
         }
 
-        ulong Round(ulong rightHalf, ulong key) {
-            ulong expandedRightHalf = Permute(rightHalf, ref expansionTable);
-            ulong xorRes = expandedRightHalf ^ key;
-
-            throw new NotImplementedException();
+        Halves Split56(ulong block) {
+            Halves splitBlock = new Halves();
+            splitBlock.Left = block >> (64 - 28) << (64 - 28);
+            splitBlock.Right = block << (64 - 28);
+            return splitBlock;
         }
 
-        ulong Permute(ulong binaryBlock, ref int[] permTable) {
+        ulong Permute(ulong block, ref int[] permTable) {
             ulong permutedBlock = 0;
             int blockSize = 64;
             for (int i = 0; i < permTable.Length; i++) {
                 int pos = permTable[i];
-                ulong bit = (binaryBlock >> (blockSize - pos)) & 1;
+                ulong bit = (block >> (blockSize - pos)) & 1;
                 permutedBlock |= bit << (blockSize - 1 - i);
             }
             return permutedBlock;
         }
 
-        struct Halves {
-            public ulong Left;
-            public ulong Right;
+        Halves Round(Halves block, ulong key) {
+            ulong expandedRightHalf = Permute(block.Right, ref expansionTable);
+            ulong nextRight = expandedRightHalf ^ key;
+            byte[] sboxesInput = SplitIntoEight(nextRight); // split 48 bits into 8 groups of 6-bits
+            ulong sBoxesRes = 0;
+            for(int i = 0; i < 8; i++) {
+                sBoxesRes <<= 4;
+                sBoxesRes |= FromSBox(sboxesInput[i], i);
+            }
+            sBoxesRes <<= 32;
+            nextRight = Permute(sBoxesRes, ref permutationTable);
+            nextRight ^= block.Left;
+            ulong nextLeft = block.Right;
+            return new Halves { Left = nextLeft, Right = nextRight };
         }
+
+        // Split 48-bit block into eight 6-bit values (left-aligned in a byte)
+        byte[] SplitIntoEight(ulong block) {
+            byte[] bytes = new byte[8];
+            for(int i = 0; i < 8; i++) 
+                bytes[i] = (byte)((block & 0xFC00000000000000) >> 56);
+            return bytes;
+        }
+
+        byte FromSBox(byte sixBit, int sBoxIndex) {
+            int row = ((sixBit & 0b00000100) >> 2) | ((sixBit & 0b10000000) >> 6);
+            int col = (sixBit & 0b01111000) >> 3;
+            return (byte)(SBoxes[sBoxIndex][row, col]);
+        }
+
         #region DES Tables
 
         int[] initialPermTable = new int[64] {
