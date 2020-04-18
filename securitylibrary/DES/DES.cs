@@ -9,22 +9,44 @@ namespace SecurityLibrary.DES {
     /// If the string starts with 0x.... then it's Hexadecimal not string
     /// </summary>
     public class DES : CryptographicTechnique {
-        public override string Decrypt(string cipherText, string key) {
-            throw new NotImplementedException();
-        }
-        
         struct Halves {
             public ulong Left;
             public ulong Right;
         }
 
         ulong[] keys = new ulong[16]; // Array to hold all the keys that will be generated
+        bool keysGenerated = false;
+
+        public override string Decrypt(string cipherText, string key) {
+            ulong plainBlock = Convert.ToUInt64(cipherText, 16); // Convert Hex string to 64 bits number
+            ulong plainKey = Convert.ToUInt64(key, 16);
+
+            if (!keysGenerated) {
+                GenerateKeys(plainKey);
+                keysGenerated = true;
+            }
+
+            ulong initialPermBlock = Permute(plainBlock, ref initialPermTable);
+            Halves halves = Split64(initialPermBlock);
+            for (int i = 0; i < 16; i++) {
+                halves = Round(halves, keys[15 - i]);
+            }
+
+            ulong swapped = halves.Right | (halves.Left >> 32);
+            ulong final = Permute(swapped, ref inverseInitialPermTable);
+
+            return "0x" + final.ToString("X").PadLeft(16, '0');
+        }
         
         public override string Encrypt(string plainText, string key) {
+
             ulong plainBlock = Convert.ToUInt64(plainText, 16); // Convert Hex string to 64 bits number
             ulong plainKey = Convert.ToUInt64(key, 16);
-            
-            GenerateKeys(plainKey);
+
+            if (!keysGenerated) {
+                GenerateKeys(plainKey);
+                keysGenerated = true;
+            }
 
             ulong initialPermBlock = Permute(plainBlock, ref initialPermTable);
             Halves halves = Split64(initialPermBlock);
@@ -34,13 +56,8 @@ namespace SecurityLibrary.DES {
 
             ulong swapped = halves.Right | (halves.Left >> 32);
             ulong final = Permute(swapped, ref inverseInitialPermTable);
-            byte[] bytes = BitConverter.GetBytes(final);
-            StringBuilder sb = new StringBuilder();
-            sb.Append("0x");
-            for (int i = 0; i < bytes.Length; i++) {
-                sb.Append(bytes[i].ToString("x2"));
-            }
-            return sb.ToString();
+
+            return "0x" + final.ToString("X").PadLeft(16, '0');
         }
 
         // Takes original key and generates all 16 keys.
@@ -55,32 +72,6 @@ namespace SecurityLibrary.DES {
             }
         }
 
-        ulong LeftShift56(ulong val, int shiftLength) {
-            for (int i = 0; i < shiftLength; i++) {
-                ulong msb = val & 0x8000000000000000;
-                val = ((val << 1) & 0xFFFFFFE000000000) | (msb >> 27);
-            }
-            return val;
-        }
-
-        ulong Merge(Halves halves) {
-            return halves.Left | halves.Right;
-        }
-
-        Halves Split64(ulong block) {
-            Halves splitBlock = new Halves();
-            splitBlock.Left = block >> 32 << 32;
-            splitBlock.Right = block << 32;
-            return splitBlock;
-        }
-
-        Halves Split56(ulong block) {
-            Halves splitBlock = new Halves();
-            splitBlock.Left = block >> (64 - 28) << (64 - 28);
-            splitBlock.Right = block << (64 - 28);
-            return splitBlock;
-        }
-
         ulong Permute(ulong block, ref int[] permTable) {
             ulong permutedBlock = 0;
             int blockSize = 64;
@@ -90,6 +81,32 @@ namespace SecurityLibrary.DES {
                 permutedBlock |= bit << (blockSize - 1 - i);
             }
             return permutedBlock;
+        }
+
+        Halves Split56(ulong block) {
+            Halves splitBlock = new Halves();
+            splitBlock.Left = block >> (64 - 28) << (64 - 28);
+            splitBlock.Right = block << 28;
+            return splitBlock;
+        }
+
+        ulong LeftShift56(ulong val, int shiftLength) {
+            for (int i = 0; i < shiftLength; i++) {
+                ulong msb = val & 0x8000000000000000;
+                val = ((val << 1) & 0xFFFFFFE000000000) | (msb >> 27);
+            }
+            return val;
+        }
+
+        ulong Merge(Halves halves) {
+            return (halves.Left & 0xFFFFFFF000000000) | ((halves.Right & 0xFFFFFFF000000000) >> 28);
+        }
+
+        Halves Split64(ulong block) {
+            Halves splitBlock = new Halves();
+            splitBlock.Left = block >> 32 << 32;
+            splitBlock.Right = block << 32;
+            return splitBlock;
         }
 
         Halves Round(Halves block, ulong key) {
@@ -111,8 +128,10 @@ namespace SecurityLibrary.DES {
         // Split 48-bit block into eight 6-bit values (left-aligned in a byte)
         byte[] SplitIntoEight(ulong block) {
             byte[] bytes = new byte[8];
-            for(int i = 0; i < 8; i++) 
+            for (int i = 0; i < 8; i++) {
                 bytes[i] = (byte)((block & 0xFC00000000000000) >> 56);
+                block <<= 6;
+            }
             return bytes;
         }
 
