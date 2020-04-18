@@ -34,7 +34,7 @@ namespace SecurityLibrary.DES {
 
             return "0x" + final.ToString("X").PadLeft(16, '0');
         }
-        
+
         public override string Encrypt(string plainText, string key) {
 
             ulong plainBlock = Convert.ToUInt64(plainText, 16); // Convert Hex string to 64 bits number
@@ -44,7 +44,7 @@ namespace SecurityLibrary.DES {
 
             ulong initialPermBlock = Permute(plainBlock, ref initialPermTable);
             Halves halves = Split64(initialPermBlock);
-            for(int i = 0; i < 16; i++) {
+            for (int i = 0; i < 16; i++) {
                 halves = Round(halves, keys[i]);
             }
 
@@ -89,7 +89,7 @@ namespace SecurityLibrary.DES {
                 ulong msb = block & 0x8000000000000000;
                 block = ((block << 1) & 0xFFFFFFE000000000) | (msb >> 27);
             }
-            return val;
+            return block;
         }
 
         ulong Merge(Halves halves) {
@@ -108,7 +108,7 @@ namespace SecurityLibrary.DES {
             ulong nextRight = expandedRightHalf ^ key;
             byte[] sboxesInput = SplitIntoEight(nextRight); // split 48 bits into 8 groups of 6-bits
             ulong sBoxesRes = 0;
-            for(int i = 0; i < 8; i++) {
+            for (int i = 0; i < 8; i++) {
                 sBoxesRes <<= 4;
                 sBoxesRes |= FromSBox(sboxesInput[i], i);
             }
