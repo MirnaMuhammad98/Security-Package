@@ -15,7 +15,6 @@ namespace SecurityLibrary.DES {
         }
 
         ulong[] keys = new ulong[16]; // Array to hold all the keys that will be generated
-        bool keysGenerated = false;
 
         public override string Decrypt(string cipherText, string key) {
             ulong plainBlock = Convert.ToUInt64(cipherText, 16); // Convert Hex string to 64 bits number
