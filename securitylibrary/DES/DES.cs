@@ -23,7 +23,6 @@ namespace SecurityLibrary.DES {
 
             GenerateKeys(plainKey);
 
-
             ulong initialPermBlock = Permute(plainBlock, ref initialPermTable);
             Halves halves = Split64(initialPermBlock);
             for (int i = 0; i < 16; i++) {
@@ -85,10 +84,10 @@ namespace SecurityLibrary.DES {
             return splitBlock;
         }
 
-        ulong LeftShift56(ulong val, int shiftLength) {
+        ulong LeftShift56(ulong block, int shiftLength) {
             for (int i = 0; i < shiftLength; i++) {
-                ulong msb = val & 0x8000000000000000;
-                val = ((val << 1) & 0xFFFFFFE000000000) | (msb >> 27);
+                ulong msb = block & 0x8000000000000000;
+                block = ((block << 1) & 0xFFFFFFE000000000) | (msb >> 27);
             }
             return val;
         }
