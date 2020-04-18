@@ -11,11 +11,8 @@ namespace SecurityLibrary.AES
     /// </summary>
     public class AES : CryptographicTechnique
     {
-        //TODO: CLEAN THE CODE!!!
-
         public int numberRounds = 10;
         public int nW = 4; // number of words in key
-        //TODO: use the variable below to make the code generic
         public int nB = 4; // number of bytes in word
 
         // S-BOX shape: 16x16
@@ -60,66 +57,45 @@ namespace SecurityLibrary.AES
         public override string Decrypt(string cipherText, string key)
         {
             // Number of Keys = numberRounds + 1
-            // Per key there exist 4 bits == #words
-            List<List<Byte>> w = new List<List<Byte>>();
-            int numberKeys = nW * (numberRounds + 1);
-            for (int i = 0; i < nB; i++)
-                w.Add(new List<Byte>());
-            for (int i = 0; i < nB; i++)
-                // Add Per word its nB Bytes
-                for (int j = 0; j < numberKeys; j++)
-                    w[i].Add(0x00);
-            // Create a temporary variable to hold keys
-            List<List<Byte>> roundKey = new List<List<byte>>();
-            for (int i = 0; i < nB; i++)
-                roundKey.Add(new List<byte>());
-            for (int i = 0; i < nB; i++)
-                for (int j = 0; j < nW; j++)
-                    roundKey[i].Add(0x00);
-            // Convert plainText, key to ByteMatrixes
+            // Per key there exist 4 #words = nW
+            int numberKeys = nW * (numberRounds + 1);          
+            // Add Per word its nB Bytes
+            List<List<Byte>> w = Creat2DMatrix(nB, numberKeys);
+            // Create a temporary variable to hold the current round key
+            List<List<Byte>> roundKey = Creat2DMatrix(nB, nW);
+            // Convert cipherText, key to ByteMatrixes
             List<List<Byte>> state = ToMatrix(cipherText);
 
             KeyExpansion(ToMatrix(key), ref w);
 
             GetRoundKey(numberRounds, w, ref roundKey);
             AddRoundKey(ref state, roundKey);
-
+            // Call inverse functions in reverse order
             for (int i = numberRounds - 1 ; i >= 1; i--)
             {
-                InvSubBytes(ref state);
                 InvShiftRows(ref state);
+                InvSubBytes(ref state);
                 GetRoundKey(i, w, ref roundKey);
                 AddRoundKey(ref state, roundKey);
                 InvMixColumns(ref state);
             }
-            InvSubBytes(ref state);
             InvShiftRows(ref state);
+            InvSubBytes(ref state);
             GetRoundKey(0, w, ref roundKey);
             AddRoundKey(ref state, roundKey);
 
-            //TODO: create a function to convert from the state to a hexa string
             return ToHex(state);
         }
 
         public override string Encrypt(string plainText, string key)
         {
             // Number of Keys = numberRounds + 1
-            // Per key there exist 4 bits == #words
-            List<List<Byte>> w = new List<List<Byte>>();
+            // Per key there exist 4 #words = nW
             int numberKeys = nW * (numberRounds + 1);
-            for (int i = 0; i < nB; i++)
-                w.Add(new List<Byte>());
-            for (int i = 0; i < nB; i++)
-                // Add Per word its nB Bytes
-                for (int j = 0; j < numberKeys; j++)
-                    w[i].Add(0x00);
-            // Create a temporary variable to hold keys
-            List<List<Byte>> roundKey = new List<List<byte>>();
-            for (int i = 0; i < nB; i++)
-                roundKey.Add(new List<byte>());
-            for (int i = 0; i < nB; i++)
-                for (int j = 0; j < nW; j++)
-                    roundKey[i].Add(0x00);
+            // Add Per word its nB Bytes
+            List<List<Byte>> w = Creat2DMatrix(nB, numberKeys);
+            // Create a temporary variable to hold the current round key
+            List<List<Byte>> roundKey = Creat2DMatrix(nB, nW);
             // Convert plainText, key to ByteMatrixes
             List<List<Byte>> state = ToMatrix(plainText);
 
@@ -129,29 +105,46 @@ namespace SecurityLibrary.AES
             GetRoundKey(0, w, ref roundKey);
             AddRoundKey(ref state, roundKey);
             // 2. Round Function (10 rounds for 128-bit key)
+            for(int i=1; i <= numberRounds - 1; i++)
+            {
                 // 2.1 Substitute bytes
                     // 2.1.1 Build the S-Box
                     // 2.1.2 Substitute
-                // 2.2 Shift rows
-                // 2.3 Mix columns
-                // 2.4 Add round key [K1, K2 ... Kn]
-                    // 2.4.1 Subkey generation
-            //TODO: the below code should implement the Round Function
-            for(int i=1; i <= numberRounds - 1; i++)
-            {
                 SubBytes(ref state);
+                // 2.2 Shift rows
                 ShiftRows(ref state);
+                // 2.3 Mix columns
                 MixColumns(ref state);
+                // 2.4 Add round key [K1, K2 ... Kn]
                 GetRoundKey(i, w, ref roundKey);
                 AddRoundKey(ref state, roundKey);
             }
+            // Final round with no Mix columns
             SubBytes(ref state);
             ShiftRows(ref state);
             GetRoundKey(numberRounds, w, ref roundKey);
             AddRoundKey(ref state, roundKey);
 
-            //TODO: create a function to convert from the state to a hexa string
             return ToHex(state);
+        }
+
+        public List<List<Byte>> Creat2DMatrix(int row, int col)
+        {
+            List<List<Byte>> val = new List<List<Byte>>();
+            for (int i = 0; i < row; i++)
+                val.Add(new List<byte>());
+            for (int i = 0; i < row; i++)
+                for (int j = 0; j < col; j++)
+                    val[i].Add(0x00);
+            return val;
+        }
+
+        public List<Byte> CreateVector(int size)
+        {
+            List<Byte> val = new List<Byte>();
+            for (int i = 0; i < nB; i++)
+                val.Add(0x00);
+            return val;
         }
 
         public void GetRoundKey(int round, List<List<Byte>>w, ref List<List<Byte>> key)
@@ -185,10 +178,12 @@ namespace SecurityLibrary.AES
             {
                 int j = 2; // skip 0x
                 List<List<Byte>> temp = new List<List<Byte>>();
-                for (int i = 0; i < 4; i++)
+                // Loop on Number of Words
+                for (int i = 0; i < nW; i++)
                 {
                     List<Byte> row = new List<Byte>();
-                    for (int k = 0; k < 4; k++)
+                    // Read the current word bytes
+                    for (int k = 0; k < nB; k++)
                     {
                         string hexByte = "";
                         hexByte += hexText[j];
@@ -201,10 +196,10 @@ namespace SecurityLibrary.AES
                 }
                 // The rows should be the columns
                 // Transpose the temp
-                for(int i = 0; i < 4; i++)
+                for(int i = 0; i < nB; i++)
                 {
                     List<Byte> row = new List<Byte>();
-                    for(int k = 0; k < 4; k++)
+                    for(int k = 0; k < nW; k++)
                     {
                         row.Add(temp[k][i]);
                     }
@@ -219,24 +214,6 @@ namespace SecurityLibrary.AES
             for(int i = 0; i < nW; i++)
                 for(int j = 0; j < nB; j++)
                     state[j][i] = (Byte)(state[j][i] ^ key[j][i]);
-        }
-
-        public void RoundFunction(/*DS state, DS roundKey*/)
-        {
-            // Change void to return
-            // the appropriate DS
-
-            /*
-            2. Round Function (10 rounds for 128-bit key)
-                2.1 Substitute bytes
-                    2.1.1 Build the S-Box
-                    2.1.2 Substitute
-                2.2 Shift rows
-                2.3 Mix columns
-                2.4 Add round key [K1, K2 ... Kn]
-                    2.4.1 Subkey generation
-            */
-            throw new NotImplementedException();
         }
 
         public void SubBytes(ref List<List<Byte>> state)
@@ -258,11 +235,11 @@ namespace SecurityLibrary.AES
             for(int i = 0; i < step; i++)
             {
                 Byte temp = state[rowIndex][0];
-                for(int j = 0; j < 4 - 1; j++)
+                for(int j = 0; j < nW - 1; j++)
                 {
                     state[rowIndex][j] = state[rowIndex][j + 1];
                 }
-                state[rowIndex][4 - 1] = temp;
+                state[rowIndex][nW - 1] = temp;
             }
         }
 
@@ -308,7 +285,7 @@ namespace SecurityLibrary.AES
                 b[2] = (Byte)(a[0] ^ a[1] ^ MulBytes(0x02, a[2]) ^ MulBytes(0x03, a[3]));
                 b[3] = (Byte)(MulBytes(0x03, a[0]) ^ a[1] ^ a[2] ^ MulBytes(0x02, a[3]));
 
-                for(int row = 0; row < 4; row++)
+                for(int row = 0; row < nB; row++)
                 {
                     state[row][col] = b[row];
                 }
@@ -317,13 +294,8 @@ namespace SecurityLibrary.AES
 
         public void InvMixColumns(ref List<List<Byte>> state)
         {
-            List<Byte> a = new List<Byte>();
-            List<Byte> b = new List<Byte>();
-            for (int i = 0; i < nB; i++)
-            {
-                a.Add(0x00);
-                b.Add(0x00);
-            }
+            List<Byte> a = CreateVector(nB);
+            List<Byte> b = CreateVector(nB);
 
             for (int col = 0; col < nW; col++)
             {
@@ -341,7 +313,7 @@ namespace SecurityLibrary.AES
                 b[2] = (Byte)(MulBytes(0x0D, a[0]) ^ MulBytes(0x09, a[1]) ^ MulBytes(0x0E, a[2]) ^ MulBytes(0x0B, a[3]));
                 b[3] = (Byte)(MulBytes(0x0B, a[0]) ^ MulBytes(0x0D, a[1]) ^ MulBytes(0x09, a[2]) ^ MulBytes(0x0E, a[3]));
 
-                for (int row = 0; row < 4; row++)
+                for (int row = 0; row < nB; row++)
                 {
                     state[row][col] = b[row];
                 }
@@ -350,24 +322,19 @@ namespace SecurityLibrary.AES
 
         public void KeyExpansion(List<List<Byte>> key, ref List<List<Byte>> w)
         {
-            List<Byte> prev = new List<Byte>();
-            List<Byte> rcon = new List<Byte>();
-            for (int i = 0; i < nB; i++)
-            {
-                prev.Add(0x00);
-                rcon.Add(0x00);
-            }
+            List<Byte> prev = CreateVector(nB);
+            List<Byte> rcon = CreateVector(nB);
 
-            for (int i = 0; i < nB; i++)
-                for (int j = 0; j < nW; j++)
-                    w[i][j] = key[i][j];
+            for (int i = 0; i < nW; i++)
+                for (int j = 0; j < nB; j++)
+                    w[j][i] = key[j][i];
 
             // the fours are the number of Bytes per 32-bit word: AES-128 has 4 words.
             int numberKeys = nW * (numberRounds + 1);
             for (int i = nW; i < numberKeys; i++)
             {
                 // Get previous word
-                for (int j = 0; j < 4; j++)
+                for (int j = 0; j < nB; j++)
                     prev[j] = w[j][i - 1];
 
                 if (i % nW == 0)
@@ -382,10 +349,9 @@ namespace SecurityLibrary.AES
                 else if (nW > 6 && i / 4 % nW == 4)
                     SubWord(ref prev);
                 // W_{i} = W_{i - nW} XOR prev 
-                for (int j = 0; j < 4; j++)
+                for (int j = 0; j < nB; j++)
                     w[j][i] = (Byte)(w[j][i - nW] ^ prev[j]);
             }
-
         }
 
         public Byte MulBytes(Byte b1, Byte b2)
