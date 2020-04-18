@@ -21,10 +21,8 @@ namespace SecurityLibrary.DES {
             ulong plainBlock = Convert.ToUInt64(cipherText, 16); // Convert Hex string to 64 bits number
             ulong plainKey = Convert.ToUInt64(key, 16);
 
-            if (!keysGenerated) {
-                GenerateKeys(plainKey);
-                keysGenerated = true;
-            }
+            GenerateKeys(plainKey);
+
 
             ulong initialPermBlock = Permute(plainBlock, ref initialPermTable);
             Halves halves = Split64(initialPermBlock);
@@ -43,10 +41,7 @@ namespace SecurityLibrary.DES {
             ulong plainBlock = Convert.ToUInt64(plainText, 16); // Convert Hex string to 64 bits number
             ulong plainKey = Convert.ToUInt64(key, 16);
 
-            if (!keysGenerated) {
-                GenerateKeys(plainKey);
-                keysGenerated = true;
-            }
+            GenerateKeys(plainKey);
 
             ulong initialPermBlock = Permute(plainBlock, ref initialPermTable);
             Halves halves = Split64(initialPermBlock);
