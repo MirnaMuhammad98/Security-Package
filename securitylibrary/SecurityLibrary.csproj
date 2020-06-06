@@ -51,6 +51,8 @@
     <Compile Include="MD5\MD5.cs" />
     <Compile Include="MainAlgorithms\PlayFair.cs" />
     <Compile Include="MainAlgorithms\RailFence.cs" />
+    <Compile Include="NumberTheory.cs" />
+    <Compile Include="PermutationGenerator.cs" />
     <Compile Include="RC4\RC4.cs" />
     <Compile Include="MainAlgorithms\RepeatingKeyVigenere.cs" />
     <Compile Include="MainAlgorithms\AutokeyVigenere.cs" />
